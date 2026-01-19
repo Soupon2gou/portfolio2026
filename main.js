@@ -292,31 +292,47 @@ function createMediaElement(item) {
     video.playsInline = true;     // インライン再生（iOS対応）
     video.preload = "auto";       // モバイルでの表示を確実にするため auto に変更
 
-    // モバイル・デスクトップ両対応の自動再生管理 (IntersectionObserver)
-    // 画面内に入ったら再生、出たら停止することで確実に描画させる
-    if ('IntersectionObserver' in window) {
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            video.play().catch(e => {
-              // ユーザー操作前の自動再生制限対策
-              console.log('自動再生待機中:', item.caption);
-            });
-          } else {
-            video.pause();
-          }
-        });
-      }, { threshold: 0.1 }); // 10%見えたら作動
-      observer.observe(video);
-    } else {
-      // 古いブラウザ向けのフォールバック
-      video.autoplay = true;
+    // サムネイル画像の指定がある場合は poster 属性に設定
+    // config.js の thumbnailPath が優先される
+    // 指定がない場合は、data/thumbnail/[動画ファイル名].jpg を自動的に試行しても良いが、
+    // ここでは config.js での明示的な指定を推奨
+    if (item.thumbnailPath) {
+      video.poster = buildSrc(item.thumbnailPath);
+    } else {        // 自動検出: data/thumbnail/[ファイル名].jpg または .png を試行
+      const thumbName = item.path.split('/').pop().split('.').slice(0, -1).join('.');
+      const jpgPath = `./data/thumbnail/${thumbName}.jpg`;
+      const pngPath = `./data/thumbnail/${thumbName}.png`;
+
+      // 存在確認のために一時的にImageオブジェクトを使用
+      const jpgTester = new Image();
+      jpgTester.onload = () => { video.poster = jpgPath; };
+      jpgTester.onerror = () => {
+        // JPGがない場合はPNGを試す
+        const pngTester = new Image();
+        pngTester.onload = () => { video.poster = pngPath; };
+        // PNGもない場合は何もしない（動画の1フレーム目が表示される）
+        pngTester.src = pngPath;
+      };
+      jpgTester.src = jpgPath;
     }
 
-    // デスクトップ向けのホバーエフェクト
+    // ホバー時の再生処理
     video.addEventListener('mouseenter', () => {
-      video.play().catch(e => console.log('動画再生エラー:', e));
+      // ユーザーインタラクションなしでの再生エラーを防ぐため catch
+      video.play().catch(e => {
+        console.log('動画再生エラー (Hover):', e);
+      });
     });
+
+    // ホバー解除時の停止処理
+    video.addEventListener('mouseleave', () => {
+      video.pause();
+      video.currentTime = 0; // 最初（サムネイル）に戻す
+      // load() を呼ぶと poster が再表示される挙動になるブラウザが多い
+      video.load();
+    });
+
+    return video;
 
     return video;
   } else {
@@ -563,6 +579,15 @@ function renderProfile() {
 
   if (profileLinks && PROFILE_CONFIG.links) {
     PROFILE_CONFIG.links.forEach(link => {
+      // 改行オブジェクトの場合
+      if (link.isBreak) {
+        const breakEl = document.createElement('div');
+        breakEl.style.flexBasis = '100%';
+        breakEl.style.height = '0';
+        profileLinks.appendChild(breakEl);
+        return;
+      }
+
       const a = document.createElement('a');
       a.href = link.url;
       a.className = 'profile-link-item';

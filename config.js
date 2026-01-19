@@ -23,13 +23,14 @@ const PROFILE_CONFIG = {
   description: "動画制作・DTM・ゲーム&ツール開発 \n が好きです～ \\(｀・ω・´)/ ",
   // ソーシャルリンク（必要に応じて追加）
   links: [
-    { name: "Twitter", url: "https://twitter.com/soupon2gou", icon: "🐦" },
-    { name: "GitHub", url: "https://github.com/soupon2gou", icon: "💻" },
-    { name: "note", url: "https://note.com/soupon2gou2", icon: "📝" },
+    { name: "X(Twitter)", url: "https://twitter.com/soupon2gou", icon: "🐦" },
+    { name: "ニコニコ", url: "https://www.nicovideo.jp/user/118672563/video?ref=pc_userpage_menu", icon: "📺" },
     { name: "YouTube", url: "https://www.youtube.com/@soupon2gou", icon: "▶️" },
     { name: "日常", url: "https://www.youtube.com/@soupon2gou_nichijou", icon: "☀️" },
-    { name: "ニコニコ", url: "https://www.nicovideo.jp/user/118672563/video?ref=pc_userpage_menu", icon: "📺" },
-    { name: "bilibili", url: "https://space.bilibili.com/1159628614", icon: "哔" }
+    { name: "bilibili", url: "https://space.bilibili.com/1159628614", icon: "哔" },
+    { isBreak: true }, // 改行
+    { name: "GitHub", url: "https://github.com/soupon2gou", icon: "💻" },
+    { name: "note", url: "https://note.com/soupon2gou2", icon: "📝" },
   ]
 };
 
@@ -77,6 +78,9 @@ const CATEGORIES = {
   // オプション項目
   type: "image",                        // "image", "video", "gif" のいずれか
   link: "https://example.com",          // 外部リンク（なければ削除）
+  // 動画の場合、サムネイルは自動的に "data/thumbnail/[動画ファイル名].jpg" を探します。
+  // 拡張子など、個別に指定したい場合は thumbnailPath を使用してください。
+  thumbnailPath: "data/thumbnail/custom.jpg",
   tags: ["Unity", "C#"],               // 技術タグ（将来の拡張用）
   date: "2024-08",                     // 制作日（将来の拡張用）
   featured: false                       // 注目作品フラグ（将来の拡張用）
@@ -387,4 +391,3 @@ if (window.location.hostname === "localhost" || window.location.hostname === "12
   console.log("カテゴリ別作品数:", getAllCategories());
   console.log("ギャラリーデータ:", GALLERY);
 }
-
