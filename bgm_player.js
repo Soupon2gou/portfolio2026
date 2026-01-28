@@ -13,10 +13,48 @@ function createBGMPlayer() {
     const player = document.createElement('div');
     player.className = 'retro-bgm-player';
 
-    // オーディオオブジェクト作成
-    const audio = new Audio('data/portfolio.wav');
-    audio.loop = true; // ループ再生
-    audio.volume = 0.5;
+    // プレイリスト設定 (config.jsから読み込み、なければデフォルト)
+    const playlist = (typeof BGM_PLAYLIST !== 'undefined' && BGM_PLAYLIST.length > 0)
+        ? BGM_PLAYLIST
+        : ['portfolio.wav']; // フォールバック
+
+    let currentTrackIndex = 0;
+    const audio = new Audio();
+    audio.volume = 0.075; // さらに-6dB (0.15 -> 0.075)
+
+    // トラックをロードする関数
+    function loadTrack(index) {
+        if (index < 0) index = playlist.length - 1;
+        if (index >= playlist.length) index = 0;
+
+        currentTrackIndex = index;
+        const filename = playlist[currentTrackIndex];
+        const src = `data/music/${filename}`;
+
+        // ファイル名から表示用タイトルを抽出 ({順番}_{タイトル}.wav -> {タイトル}.wav)
+        // 最初のアンダースコア以降をすべて取得する
+        let title = filename;
+        try {
+            const firstUnderscore = filename.indexOf('_');
+            if (firstUnderscore !== -1) {
+                title = filename.substring(firstUnderscore + 1);
+            }
+        } catch (e) {
+            console.warn("Title parsing failed", e);
+        }
+
+        audio.src = src;
+        audio.load();
+
+        // UI更新
+        const scrollingText = player.querySelector('.scrolling-text');
+        if (scrollingText) {
+            scrollingText.textContent = `Now Playing: ${title} ... `;
+        }
+    }
+
+    // 初期トラックロード
+    loadTrack(0);
 
     // ドラッグ用変数
     let isDragging = false;
@@ -39,7 +77,7 @@ function createBGMPlayer() {
         <div class="player-main">
             <div class="player-screen">
                 <div class="player-info">
-                    <span class="scrolling-text">Now Playing: portfolio.wav ... </span>
+                    <span class="scrolling-text">Now Playing: ...</span>
                 </div>
                 <div class="player-visualizer">
                     <div class="bar" style="height: 60%"></div>
@@ -60,17 +98,23 @@ function createBGMPlayer() {
                 <!-- シークバーに変更 -->
                 <input type="range" class="seek-bar" min="0" max="100" value="0">
             </div>
-            <div class="player-time">00:00</div>
+            <div class="player-time">00:00 / 00:00</div>
         </div>
     `;
 
     document.body.appendChild(player);
 
+    // UI要素の再取得 (innerHTML書き換え後)
     const playBtn = player.querySelector('.play');
     const stopBtn = player.querySelector('.stop');
+    const prevBtn = player.querySelector('.prev');
+    const nextBtn = player.querySelector('.next');
     const seekBar = player.querySelector('.seek-bar');
     const timeDisplay = player.querySelector('.player-time');
     const bars = player.querySelectorAll('.bar');
+
+    // 再取得した要素でタイトル初期表示を更新
+    loadTrack(currentTrackIndex);
 
     // 閉じるボタン
     player.querySelector('.player-btn-close').addEventListener('click', () => {
@@ -102,6 +146,37 @@ function createBGMPlayer() {
         seekBar.value = 0;
     });
 
+    // 前へ
+    prevBtn.addEventListener('click', () => {
+        const wasPlaying = !audio.paused;
+        loadTrack(currentTrackIndex - 1);
+        if (wasPlaying) {
+            audio.play().catch(e => console.log(e));
+        } else {
+            // 停止中ならアイコンなどは停止状態のまま
+            playBtn.textContent = '▶';
+            toggleVisualizer(false);
+        }
+    });
+
+    // 次へ
+    nextBtn.addEventListener('click', () => {
+        const wasPlaying = !audio.paused;
+        loadTrack(currentTrackIndex + 1);
+        if (wasPlaying) {
+            audio.play().catch(e => console.log(e));
+        } else {
+            playBtn.textContent = '▶';
+            toggleVisualizer(false);
+        }
+    });
+
+    // 曲終了時の処理 (次の曲へ)
+    audio.addEventListener('ended', () => {
+        loadTrack(currentTrackIndex + 1);
+        audio.play().catch(e => console.log('Continuous play error:', e));
+    });
+
     // ビジュアライザー制御
     function toggleVisualizer(isRunning) {
         bars.forEach(bar => {
@@ -123,8 +198,6 @@ function createBGMPlayer() {
     // メタデータ読み込み完了
     audio.addEventListener('loadedmetadata', () => {
         updateTimeDisplay();
-        // durationが取得できたらmaxを設定することも可能だが、
-        // ここでは0-100%で扱っているので変更不要
     });
 
     // シークバー操作
@@ -150,7 +223,6 @@ function createBGMPlayer() {
                 console.log(`Seek to: ${time}s`);
             }
             // 直後のtimeupdateによる戻り防止のため、遅延時間を延長
-            // サーバー環境によってはシーク反映に時間がかかる場合がある
             setTimeout(() => {
                 isSeeking = false;
             }, 800);

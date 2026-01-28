@@ -13,6 +13,14 @@ const THUMB_WIDTH = 600;
 // フルサイズ画像の幅設定（ピクセル）
 const FULL_WIDTH = 1200;
 
+// BGMプレイリスト
+// data/music/ フォルダ内のファイルを指定
+// ファイル名の形式: {順番}_{タイトル}.wav
+const BGM_PLAYLIST = [
+  "1_SFP2.wav",
+  // "2_NextSong.wav", 
+];
+
 
 // プロフィール設定
 const PROFILE_CONFIG = {
